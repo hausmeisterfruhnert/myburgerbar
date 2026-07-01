@@ -1,641 +1,1119 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="utf-8">
-    <title>myburger bar - drink creator</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>myburger bar · drink creator</title>
+    <style>
+        /* ── Design Tokens ─────────────────────────────── */
+        :root {
+            --amber:     #ff9f1c;
+            --amber-dim: #c97800;
+            --bg:        #141414;
+            --surface:   #1e1e1e;
+            --card:      #262626;
+            --border:    #333;
+            --text:      #e8e8e8;
+            --muted:     #888;
+            --danger:    #e03131;
+            --success:   #2f9e44;
+            --radius:    8px;
+            --radius-sm: 4px;
+        }
+
+        /* ── Reset & Base ──────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        /* ── Layout ────────────────────────────────────── */
+        .app {
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        /* ── Header ────────────────────────────────────── */
+        header {
+            text-align: center;
+            padding: 24px 0 20px;
+        }
+        header h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--amber);
+            letter-spacing: -0.5px;
+        }
+        header p {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-top: 4px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        /* ── Section ───────────────────────────────────── */
+        .section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 12px;
+        }
+
+        /* ── Controls ──────────────────────────────────── */
+        label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 5px;
+        }
+        select, input[type="text"], input[type="number"] {
+            width: 100%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font-size: 0.95rem;
+            padding: 10px 12px;
+            outline: none;
+            transition: border-color 0.15s;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        select:focus, input:focus {
+            border-color: var(--amber);
+        }
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+            cursor: pointer;
+        }
+
+        /* ── Filter Chips ──────────────────────────────── */
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .chip {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .chip:hover { border-color: var(--amber); color: var(--text); }
+        .chip.active {
+            background: var(--amber);
+            border-color: var(--amber);
+            color: #141414;
+        }
+
+        /* ── Recipe Card ───────────────────────────────── */
+        #recipeCard { display: none; }
+
+        .price-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .price-tag {
+            background: var(--amber);
+            color: #141414;
+            font-size: 1.1rem;
+            font-weight: 800;
+            padding: 6px 14px;
+            border-radius: 20px;
+        }
+        .double-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card);
+            border: 1px solid var(--amber);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--amber);
+            user-select: none;
+        }
+        .double-toggle input { width: auto; cursor: pointer; accent-color: var(--amber); }
+
+        /* ── Ingredient List ───────────────────────────── */
+        .ingredient-list {
+            list-style: none;
+            margin: 0 0 16px 0;
+        }
+        .ingredient-list li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        .ingredient-list li:last-child { border-bottom: none; }
+        .ing-bullet {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--amber);
+            flex-shrink: 0;
+        }
+
+        /* ── Edit: Tag-based ingredient input ─────────── */
+        .tag-input-wrap {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            cursor: text;
+            transition: border-color 0.15s;
+            min-height: 44px;
+        }
+        .tag-input-wrap:focus-within { border-color: var(--amber); }
+        .tag {
+            background: var(--amber);
+            color: #141414;
+            border-radius: 12px;
+            padding: 3px 8px 3px 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: background 0.12s;
+        }
+        .tag:hover { background: #e08c10; }
+        .tag-label { cursor: text; }
+        .tag-remove {
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            opacity: 0.7;
+            background: none;
+            border: none;
+            color: #141414;
+            padding: 0;
+        }
+        .tag-remove:hover { opacity: 1; }
+        /* Inline-Edit: Tag wird zum Input */
+        .tag.editing {
+            background: var(--card);
+            border: 1.5px solid var(--amber);
+            padding: 1px 6px;
+        }
+        .tag.editing .tag-edit-input {
+            border: none;
+            background: none;
+            outline: none;
+            color: var(--text);
+            font-size: 0.82rem;
+            font-weight: 600;
+            width: auto;
+            min-width: 60px;
+            max-width: 200px;
+            padding: 1px 0;
+        }
+        .tag-new-input {
+            border: none;
+            background: none;
+            outline: none;
+            color: var(--text);
+            font-size: 0.88rem;
+            padding: 2px 4px;
+            min-width: 120px;
+            flex: 1;
+        }
+        .tag-hint {
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        /* ── Buttons ───────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            width: 100%;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary   { background: var(--amber); color: #141414; }
+        .btn-success   { background: var(--success); color: #fff; }
+        .btn-danger    { background: var(--danger); color: #fff; }
+        .btn-neutral   { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+        .btn-sm        { padding: 5px 10px; font-size: 0.78rem; width: auto; }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .btn-row .btn { flex: 1; }
+
+        /* ── Add to Table button ───────────────────────── */
+        #addToTableBtn {
+            display: none;
+            margin-top: 14px;
+        }
+
+        /* ── Edit section ──────────────────────────────── */
+        #editSection {
+            display: none;
+            border-top: 1px dashed var(--border);
+            padding-top: 14px;
+            margin-top: 14px;
+        }
+        .form-row {
+            margin-bottom: 12px;
+        }
+
+        /* ── Surcharge row ─────────────────────────────── */
+        .surcharge-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .surcharge-row input { flex: 1; }
+        .surcharge-row span { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+
+        /* ── Table Orders ──────────────────────────────── */
+        .table-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        .table-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .table-card-header h4 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--amber);
+        }
+        .order-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.87rem;
+        }
+        .order-item:last-child { border-bottom: none; }
+        .order-item-name { flex: 1; }
+        .order-item-price {
+            font-weight: 700;
+            margin: 0 10px;
+            color: var(--amber);
+        }
+        .remove-item-btn {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 2px 4px;
+            border-radius: 3px;
+            line-height: 1;
+        }
+        .remove-item-btn:hover { background: #2a1010; }
+        .table-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+        .table-total strong { color: var(--amber); font-size: 1rem; }
+        .empty-state {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+            padding: 16px 0;
+        }
+
+        /* ── New Recipe Form ───────────────────────────── */
+        #newRecipeSection .tag-input-wrap { margin-bottom: 4px; }
+
+        /* ── Divider ───────────────────────────────────── */
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 4px 0 12px;
+        }
+
+        /* ── Toast ─────────────────────────────────────── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--success);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none;
+            z-index: 999;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ── Responsive ────────────────────────────────── */
+        @media (max-width: 400px) {
+            .chip { padding: 5px 10px; font-size: 0.73rem; }
+            .price-tag { font-size: 1rem; }
+        }
+    </style>
 </head>
 <body>
+<div class="app">
 
-<div class="container">
-    <h1>myburger bar 🍹</h1>
-    
-    <!-- Optionale Tischauswahl für Bestellungen -->
-    <div class="table-selector-box">
-        <label for="activeTableSelect"><strong>Modus / Tischauswahl:</strong></label>
-        <select id="activeTableSelect" onchange="toggleTableMode()" style="margin-top: 5px;">
-            <option value="">-- Nur Rezept ansehen (Kein Tisch) --</option>
-            <option value="Tisch 1">Bestellung für Tisch 1</option>
-            <option value="Tisch 2">Bestellung für Tisch 2</option>
-            <option value="Tisch 3">Bestellung für Tisch 3</option>
-            <option value="Tisch 4">Bestellung für Tisch 4</option>
-            <option value="Tisch 5">Bestellung für Tisch 5</option>
-            <option value="Tisch 6">Bestellung für Tisch 6</option>
-            <option value="Tisch 7">Bestellung für Tisch 7</option>
-            <option value="Tisch 8">Bestellung für Tisch 8</option>
-            <option value="Tisch 9">Bestellung für Tisch 9</option>
-            <option value="Tisch 10">Bestellung für Tisch 10</option>
+    <header>
+        <h1>myburger bar 🍹</h1>
+        <p>Drink Creator &amp; Tisch-Übersicht</p>
+    </header>
+
+    <!-- ── Tisch & Doppelshot-Aufschlag ── -->
+    <div class="section">
+        <div class="section-title">Einstellungen</div>
+        <div class="form-row">
+            <label for="activeTableSelect">Modus / Tischauswahl</label>
+            <select id="activeTableSelect" onchange="toggleTableMode()">
+                <option value="">— Nur Rezept ansehen —</option>
+                <option value="Tisch 1">Tisch 1</option>
+                <option value="Tisch 2">Tisch 2</option>
+                <option value="Tisch 3">Tisch 3</option>
+                <option value="Tisch 4">Tisch 4</option>
+                <option value="Tisch 5">Tisch 5</option>
+                <option value="Tisch 6">Tisch 6</option>
+                <option value="Tisch 7">Tisch 7</option>
+                <option value="Tisch 8">Tisch 8</option>
+                <option value="Tisch 9">Tisch 9</option>
+                <option value="Tisch 10">Tisch 10</option>
+            </select>
+        </div>
+        <div class="form-row">
+            <label for="globalDoubleShotSurcharge">Aufschlag Doppel-Shot (€)</label>
+            <div class="surcharge-row">
+                <input type="number" id="globalDoubleShotSurcharge" step="0.10" min="0" onchange="updateDoubleShotSurcharge()">
+                <span>wird bei Shots addiert</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Getränke-Auswahl ── -->
+    <div class="section">
+        <div class="section-title">Getränk wählen</div>
+
+        <div class="chip-row" style="margin-bottom: 12px;">
+            <button class="chip active" onclick="filterCategory('all', this)">Alle</button>
+            <button class="chip" onclick="filterCategory('hausgemachtes', this)">Hausgemachtes</button>
+            <button class="chip" onclick="filterCategory('bier', this)">Bier</button>
+            <button class="chip" onclick="filterCategory('prickelndes', this)">Prickelndes</button>
+            <button class="chip" onclick="filterCategory('longdrinks', this)">Longdrinks</button>
+            <button class="chip" onclick="filterCategory('shots', this)">Shots</button>
+            <button class="chip" onclick="filterCategory('custom', this)">Eigene</button>
+        </div>
+
+        <select id="cocktailSelect" onchange="showRecipe()">
+            <option value="">— Getränk wählen —</option>
         </select>
     </div>
 
-    <!-- Globaler Doppelshot Aufschlag -->
-    <div class="global-surcharge-box">
-        <label for="globalDoubleShotSurcharge">Aufschlag Doppel-Shot (€):</label>
-        <input type="number" id="globalDoubleShotSurcharge" step="0.10" min="0" onchange="updateDoubleShotSurcharge()">
-    </div>
-    <!-- Kategorie-Filter Buttons -->
-    <div class="filter-container">
-        <button class="btn-filter active" onclick="filterCategory('all', this)">Alle</button>
-        <button class="btn-filter" onclick="filterCategory('hausgemachtes', this)">Hausgemachtes</button>
-        <button class="btn-filter" onclick="filterCategory('bier', this)">Bier</button>
-        <button class="btn-filter" onclick="filterCategory('prickelndes', this)">Prickelndes</button>
-        <button class="btn-filter" onclick="filterCategory('longdrinks', this)">Longdrinks</button>
-        <button class="btn-filter" onclick="filterCategory('shots', this)">Shots</button>
-    </div>
-    
-    <!-- Dropdown für die Getränkeauswahl -->
-    <select id="cocktailSelect" onchange="showRecipe()">
-        <option value="">-- Getränk wählen --</option>
-    </select>
+    <!-- ── Rezeptkarte ── -->
+    <div class="section" id="recipeCard">
+        <div class="price-row">
+            <h3 id="cocktailTitle" style="font-size:1.05rem; font-weight:700;"></h3>
+            <div class="price-tag"><span id="priceDisplay">0,00</span> €</div>
+        </div>
 
-    <!-- Anzeige der Rezeptkarte mit Preisen -->
-    <div id="recipeCard" class="recipe-card">
-        <h3 id="cocktailTitle"></h3>
-        
-        <div class="price-badge">Preis: <span id="priceDisplay">0,00</span> €</div>
-
-        <div id="doubleShotContainer" class="double-shot-box" style="display: none;">
-            <label>
-                <input type="checkbox" id="doubleShotCheckbox" onchange="toggleDoubleShot()"> 
-                <strong>Doppel-Shot (Double) aktivieren</strong>
+        <!-- Doppel-Shot Toggle (nur für Shots) -->
+        <div id="doubleShotContainer" style="display:none; margin-bottom:14px;">
+            <label class="double-toggle">
+                <input type="checkbox" id="doubleShotCheckbox" onchange="toggleDoubleShot()">
+                Doppel-Shot aktivieren
             </label>
         </div>
 
-        <ul id="ingredientsList"></ul>
-        
-        <!-- Bestellbutton: Wird nur eingeblendet, wenn ein Tisch gewählt ist -->
-        <button id="addToTableBtn" class="btn-add-to-table" onclick="addDrinkToTable()" style="display: none;">➔ Zum ausgewählten Tisch hinzufügen</button>
-        
-        <!-- Bearbeitungs-Modus -->
-        <div id="editSection" style="display: none; margin-top: 15px; border-top: 1px dashed #555; padding-top: 10px;">
-            <label for="editIngredients" style="font-size: 13px; color: #ff9f1c; display: block; margin-bottom: 3px;">Zutaten ändern (mit Komma trennen):</label>
-            <input type="text" id="editIngredients" style="margin-bottom: 8px;">
-            
-            <label for="editPrice" style="font-size: 13px; color: #ff9f1c; display: block; margin-bottom: 3px;">Basispreis ändern (€):</label>
-            <input type="number" id="editPrice" step="0.10" min="0" style="margin-bottom: 10px;">
-            
-            <div style="display: flex; gap: 10px;">
-                <button class="btn-save" onclick="updateRecipeIngredients()" style="background-color: #28a745; color: white; margin-top: 0; font-size: 13px;">Änderungen speichern</button>
-                <button id="resetRecipeBtn" class="btn-delete" onclick="resetToDefault()" style="background-color: #6c757d; color: white; margin-top: 0; width: auto; font-size: 13px; padding: 5px 10px;">Zurücksetzen</button>
+        <!-- Zutatenliste -->
+        <ul class="ingredient-list" id="ingredientsList"></ul>
+
+        <!-- Zum Tisch hinzufügen -->
+        <button class="btn btn-primary" id="addToTableBtn" onclick="addDrinkToTable()">
+            ➔ Zu <span id="addBtnTableName">Tisch</span> hinzufügen
+        </button>
+
+        <!-- Bearbeitungsbereich -->
+        <div id="editSection">
+            <div class="section-title" style="margin-bottom:10px;">Rezept bearbeiten</div>
+
+            <div class="form-row">
+                <label>Zutaten <span style="font-weight:400;">(Enter oder Komma zum Hinzufügen)</span></label>
+                <div class="tag-input-wrap" id="tagInputWrap" onclick="focusNewTagInput('tagInputWrap')">
+                    <input type="text" id="tagInput" class="tag-new-input" placeholder="Zutat eingeben …" autocomplete="off">
+                </div>
+                <p class="tag-hint">Enter ↵ oder Komma , zum Hinzufügen · Klick auf Zutat zum Bearbeiten · × zum Entfernen</p>
+            </div>
+
+            <div class="form-row">
+                <label for="editPrice">Basispreis (€)</label>
+                <input type="number" id="editPrice" step="0.10" min="0">
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-success" onclick="updateRecipeIngredients()">Speichern</button>
+                <button id="resetRecipeBtn" class="btn btn-neutral" onclick="resetToDefault()">Zurücksetzen</button>
+                <button id="deleteBtn" class="btn btn-danger" onclick="deleteCustom()">Löschen</button>
             </div>
         </div>
-        
-        <button id="deleteBtn" class="btn-delete" onclick="deleteCustom()">löschen</button>
     </div>
 
-    <!-- Live-Tischübersicht -->
-    <div class="orders-section">
-        <h2>Aktuelle Tisch-Bestellungen 📋</h2>
-        <div id="tablesContainer"></div>
+    <!-- ── Tisch-Bestellungen ── -->
+    <div class="section">
+        <div class="section-title">Tisch-Bestellungen 📋</div>
+        <div id="tablesContainer">
+            <p class="empty-state">Keine offenen Bestellungen</p>
+        </div>
     </div>
 
-    <hr style="margin-top: 30px;">
+    <!-- ── Eigenes Rezept ── -->
+    <div class="section" id="newRecipeSection">
+        <div class="section-title">Eigenes Rezept hinzufügen</div>
 
-    <!-- Formular für neue Rezepte -->
-    <h2>eigenes rezept</h2>
-    <input type="text" id="newName" placeholder="Name des Getränks">
-    <input type="text" id="ing1" placeholder="Zutaten (mit Komma trennen)">
-    <small>Tipp: "Zutat 1, Zutat 2, Zutat 3" eingeben</small>
-    <button class="btn-save" onclick="saveCocktail()">speichern</button>
-</div>
+        <div class="form-row">
+            <label for="newName">Name</label>
+            <input type="text" id="newName" placeholder="z. B. Hauscocktail">
+        </div>
 
-</body>
-</html>
-<style>
-    body {
-        font-family: sans-serif;
-        background-color: #1a1a1a;
-        color: #eee;
-        padding: 20px;
-    }
-    .container {
-        background-color: #2d2d2d;
-        padding: 20px;
-        border-radius: 10px;
-        max-width: 500px;
-        margin: auto;
-    }
-    h1, h2 {
-        color: #ff9f1c;
-    }
-    select, input, button {
-        width: 100%;
-        padding: 10px;
-        margin-top: 5px;
-        box-sizing: border-box;
-    }
-    .table-selector-box {
-        background: #333;
-        padding: 12px;
-        border-radius: 6px;
-        margin-bottom: 10px;
-        border-left: 4px solid #ff9f1c;
-    }
-    .global-surcharge-box {
-        background: #1a1a1a;
-        padding: 10px;
-        border-radius: 6px;
-        margin-bottom: 15px;
-        border: 1px solid #444;
-    }
-    .global-surcharge-box label {
-        color: #ff9f1c;
-        font-size: 13px;
-        font-weight: bold;
-    }
-    .filter-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 5px;
-        margin-bottom: 15px;
-    }
-    .btn-filter {
-        flex: 1 1 calc(33.33% - 5px);
-        min-width: 90px;
-        background-color: #444;
-        color: #eee;
-        border: none;
-        padding: 8px;
-        font-size: 11px;
-        cursor: pointer;
-        border-radius: 4px;
-        font-weight: bold;
-    }
-    .btn-filter.active {
-        background-color: #ff9f1c;
-        color: #1a1a1a;
-    }
-    .price-badge {
-        background-color: #ff9f1c;
-        color: #1a1a1a;
-        padding: 8px;
-        font-weight: bold;
-        border-radius: 4px;
-        display: inline-block;
-        margin-bottom: 10px;
-    }
-    .double-shot-box {
-        background-color: #333;
-        padding: 10px;
-        border-radius: 4px;
-        margin-bottom: 10px;
-        border-left: 4px solid #ff9f1c;
-    }
-    .double-shot-box input {
-        width: auto;
-        display: inline-block;
-        margin-right: 5px;
-    }
-    .btn-add-to-table {
-        background-color: #ff9f1c;
-        color: #1a1a1a;
-        border: none;
-        padding: 12px;
-        font-weight: bold;
-        font-size: 14px;
-        cursor: pointer;
-        margin-top: 10px;
-        border-radius: 4px;
-    }
-    .recipe-card {
-        display: none;
-        margin-top: 20px;
-        padding: 15px;
-        background: #1a1a1a;
-        border-radius: 6px;
-    }
-    .btn-save {
-        background-color: #ff9f1c;
-        color: #1a1a1a;
-        border: none;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    .btn-delete {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        cursor: pointer;
-        margin-top: 10px;
-    }
-    .orders-section {
-        margin-top: 25px;
-        background: #222;
-        padding: 15px;
-        border-radius: 8px;
-    }
-    .table-card {
-        background: #2d2d2d;
-        border: 1px solid #444;
-        border-radius: 6px;
-        padding: 10px;
-        margin-bottom: 10px;
-    }
-    .table-card h4 {
-        margin: 0 0 5px 0;
-        color: #ff9f1c;
-        display: flex;
-        justify-content: space-between;
-    }
-    .table-card ul {
-        margin: 5px 0;
-        padding-left: 20px;
-        font-size: 13px;
-    }
-    .btn-clear-table {
-        background: #dc3545;
-        color: white;
-        border: none;
-        padding: 3px 8px;
-        font-size: 11px;
-        cursor: pointer;
-        border-radius: 3px;
-        width: auto;
-    }
-    small {
-        color: #aaa;
-        display: block;
-        margin-top: 2px;
-    }
-</style>
-<script>
-    const defaultMenu = {
-        // --- HAUSGEMACHTES (0,3 l) ---
-        "ginger-lemon": { title: "Ginger-Lemon Squash", category: "hausgemachtes", price: 4.90, ingredients: ["4 cl Ingwer-Extrakt", "3 cl Limettensaft", "ca. 15-20 cl Sodawasser", "Eiswürfel"], isdefault: true },
-        "gurke-limette": { title: "Gurke-Limette Squash", category: "hausgemachtes", price: 4.90, ingredients: ["3 Scheiben Gurke", "3 cl Limettensaft", "2 cl Limettensirup", "ca. 15-20 cl Sodawasser", "Eiswürfel"], isdefault: true },
-        "mango-minze": { title: "Mango-Minze Squash", category: "hausgemachtes", price: 4.90, ingredients: ["4 cl Mangosirup", "4-5 Blätter Minze", "ca. 20 cl Sodawasser", "Eiswürfel"], isdefault: true },
-        "rhabarber-limette": { title: "Rhabarber-Limetten Squash", category: "hausgemachtes", price: 4.90, ingredients: ["12 cl Rhabarber-Nektar", "3 cl Limettensaft", "ca. 10 cl Sodawasser", "Eiswürfel"], isdefault: true },
-        "basilikum-squash": { title: "Basilikum Squash", category: "hausgemachtes", price: 4.90, ingredients: ["5 Blätter Basilikum", "2 cl Limettensirup", "ca. 20 cl Basilikumsoda", "Eiswürfel"], isdefault: true },
-        "maracuja-squash": { title: "Maracuja Squash", category: "hausgemachtes", price: 4.90, ingredients: ["10 cl Maracuja-Nektar", "2 cl Granatapfelsirup", "5 Blätter Minze", "ca. 10 cl Sodawasser"], isdefault: true },
-        "holunder-squash": { title: "Holunder Squash", category: "hausgemachtes", price: 4.90, ingredients: ["2 cl Holunderblütensirup", "3 cl Zitronensaft", "2 Scheiben Gurke", "Sodawasser"], isdefault: true },
-        "eistee-pfirsich": { title: "Bio Eistee Pfirsich", category: "hausgemachtes", price: 4.20, ingredients: ["33 cl Bio Eistee Pfirsich (gekühlt)", "1 Zitronenscheibe"], isdefault: true },
-        "eistee-zitrone": { title: "Bio Eistee Zitrone", category: "hausgemachtes", price: 4.20, ingredients: ["33 cl Bio Eistee Zitrone (gekühlt)", "1 Zitronenscheibe"], isdefault: true },
-
-        // --- BIER ---
-        "helles": { title: "Helles 0,5 l", category: "bier", price: 4.10, ingredients: ["50 cl Helles vom Fass"], isdefault: true },
-        "weissbier": { title: "Weissbier 0,5 l", category: "bier", price: 4.40, ingredients: ["50 cl Weizenbier / Weissbier"], isdefault: true },
-        "weissbier-dunkel": { title: "Weissbier Dunkel 0,5 l", category: "bier", price: 4.40, ingredients: ["50 cl Dunkles Weizenbier"], isdefault: true },
-        "weissbier-leicht": { title: "Weissbier Leicht 0,5 l", category: "bier", price: 4.40, ingredients: ["50 cl Leichtes Weizenbier"], isdefault: true },
-        "weissbier-alkoholfrei": { title: "Weissbier Alkoholfrei 0,5 l", category: "bier", price: 4.40, ingredients: ["50 cl Alkoholfreies Weizenbier"], isdefault: true },
-        "dunkel": { title: "Dunkel 0,5 l", category: "bier", price: 4.30, ingredients: ["50 cl Dunkles Bier / Export Dunkel"], isdefault: true },
-        "radler": { title: "Radler 0,5 l", category: "bier", price: 4.10, ingredients: ["25 cl Helles Bier", "25 cl Zitronenlimonade"], isdefault: true },
-        "cola-weizen": { title: "Cola Weizen 0,5 l", category: "bier", price: 4.40, ingredients: ["25 cl Weizenbier", "25 cl Cola"], isdefault: true },
-        "russ": { title: "Russ 0,5 l", category: "bier", price: 4.40, ingredients: ["25 cl Weizenbier", "25 cl Zitronenlimonade"], isdefault: true },
-        "warsteiner-af": { title: "Warsteiner Alkoholfrei 0,33 l", category: "bier", price: 3.80, ingredients: ["33 cl Alkoholfreies Pils"], isdefault: true },
-        "warsteiner-pils": { title: "Warsteiner Pils 0,33 l", category: "bier", price: 3.80, ingredients: ["33 cl Pilsener Bier"], isdefault: true },
-        "corona": { title: "Corona 0,33 l", category: "bier", price: 4.80, ingredients: ["33 cl Corona Extra", "1 Spalte frische Limette"], isdefault: true },
-        "estrella": { title: "Estrella Galicia 0,3 l", category: "bier", price: 3.90, ingredients: ["30 cl Estrella Lagerbier"], isdefault: true },
-
-        // --- PRICKELNDES ---
-        "hugo": { title: "Hugo 0,3 l", category: "prickelndes", price: 6.90, ingredients: ["3 cl Holunderblütensirup", "12 cl Prosecco", "5 cl Sodawasser", "Minze", "Limette"], isdefault: true },
-        "aperol-spritz": { title: "Aperol Spritz 0,3 l", category: "prickelndes", price: 6.90, ingredients: ["6 cl Aperol", "9 cl Prosecco", "3 cl Sodawasser", "Orangenscheibe"], isdefault: true },
-        "basilikum-spritz": { title: "Basilikum Spritz 0,3 l", category: "prickelndes", price: 7.20, ingredients: ["12 cl Prosecco", "8 cl Basilikumsoda", "2 cl Limettensaft", "Minze"], isdefault: true },
-        "campari-spritz": { title: "Campari Spritz 0,3 l", category: "prickelndes", price: 6.90, ingredients: ["5 cl Campari", "10 cl Prosecco", "5 cl Orangensaft", "Orangenscheibe"], isdefault: true },
-        "pimms": { title: "Pimm's No.1 0,3 l", category: "prickelndes", price: 7.50, ingredients: ["5 cl Pimm's No.1", "12 cl Ginger Ale", "Gurke", "Orange", "Limette"], isdefault: true },
-        "lillet-wild-berry": { title: "Lillet Wild Berry 0,3 l", category: "prickelndes", price: 6.90, ingredients: ["5 cl Lillet Blanc", "12 cl Schweppes Wild Berry", "Himbeeren"], isdefault: true },
-        "lillet-pink": { title: "Lillet Pink 0,3 l", category: "prickelndes", price: 6.90, ingredients: ["5 cl Lillet Blanc", "12 cl Pink Grapefruit Limo", "Limettenscheibe"], isdefault: true },
-        "rosato-tonic": { title: "Rosato Tonic 0,3 l", category: "prickelndes", price: 6.90, ingredients: ["5 cl Ramazzotti Aperitivo Rosato", "12 cl Tonic Water", "Limette"], isdefault: true },
-        "italicus-spritz": { title: "Italicus Spritz 0,3 l", category: "prickelndes", price: 7.90, ingredients: ["5 cl Italicus", "10 cl Prosecco", "5 cl Sodawasser", "Limettenscheibe"], isdefault: true },
-        "crodino-spritz": { title: "Crodino Spritz Alkoholfrei 0,3 l", category: "prickelndes", price: 5.50, ingredients: ["10 cl Crodino", "10 cl Sodawasser", "Orangenscheibe"], isdefault: true },
-        "prosecco-piccolo": { title: "Prosecco Piccolo 0,2 l", category: "prickelndes", price: 4.90, ingredients: ["20 cl Scavi & Ray Frizzante"], isdefault: true },
-        "prosecco-flasche": { title: "Prosecco Flasche 0,75 l", category: "prickelndes", price: 19.50, ingredients: ["75 cl Scavi & Ray Frizzante"], isdefault: true },
-        "weinschorle-klein": { title: "Weinschorle 0,25 l", category: "prickelndes", price: 4.20, ingredients: ["12,5 cl Weißwein", "12,5 cl Sodawasser"], isdefault: true },
-        "weinschorle-gross": { title: "Weinschorle 0,5 l", category: "prickelndes", price: 6.50, ingredients: ["25 cl Weißwein", "25 cl Sodawasser"], isdefault: true },
-        // --- LONGDRINKS ---
-        "moscow-mule": { title: "Moscow Mule 4 cl", category: "longdrinks", price: 8.50, ingredients: ["4 cl Vodka", "12 cl Spicy Ginger", "Gurke", "Limette"], isdefault: true },
-        "munich-mule": { title: "Munich Mule 4 cl", category: "longdrinks", price: 8.50, ingredients: ["4 cl Gin", "12 cl Spicy Ginger", "Gurke", "Limette"], isdefault: true },
-        "vodka-long": { title: "Vodka 4 cl", category: "longdrinks", price: 8.00, ingredients: ["4 cl Vodka", "15 cl Red Bull oder Bitter Lemon"], isdefault: true },
-        "pink-paloma": { title: "Pink Paloma 4 cl", category: "longdrinks", price: 8.50, ingredients: ["4 cl Tequila", "2 cl Limettensaft", "12 cl Pink Grapefruit Limo", "Salzrand"], isdefault: true },
-        "cuba-libre": { title: "Cuba Libre 4 cl", category: "longdrinks", price: 8.00, ingredients: ["4 cl Havana Club Rum", "12 cl Coca-Cola", "Limette"], isdefault: true },
-        "whisky-cola": { title: "Whisky Cola 4 cl", category: "longdrinks", price: 8.00, ingredients: ["4 cl Whisky", "15 cl Coca-Cola"], isdefault: true },
-        "seven-seven": { title: "Seven & Seven 4 cl", category: "longdrinks", price: 8.50, ingredients: ["4 cl Seagram's 7 Whisky", "15 cl Ginger Ale"], isdefault: true },
-        "gin-tonic-long": { title: "Gin Tonic 4 cl", category: "longdrinks", price: 8.00, ingredients: ["4 cl Dry Gin", "12 cl Tonic Water", "Limettenscheibe"], isdefault: true },
-        "haus-gin-tonic": { title: "Haus Gin Tonic 4 cl", category: "longdrinks", price: 9.00, ingredients: ["4 cl Dry Gin", "1 cl Yuzu-Saft", "12 cl Tonic Water"], isdefault: true },
-        "gin-basil": { title: "Gin Basil 4 cl", category: "longdrinks", price: 8.50, ingredients: ["4 cl Dry Gin", "2 cl Limettensaft", "12 cl Basilikumsoda"], isdefault: true },
-        "gin-buck": { title: "Gin Buck 4 cl", category: "longdrinks", price: 8.50, ingredients: ["4 cl Dry Gin", "2 cl Zitronensaft", "12 cl Ginger Ale"], isdefault: true },
-        "lemony-snicket": { title: "Lemony Snicket 4 cl", category: "longdrinks", price: 8.50, ingredients: ["4 cl Dry Gin", "2 cl Zitronensaft", "1 cl Zuckersirup", "12 cl Bitter Lemon"], isdefault: true },
-        "ipanema": { title: "Ipanema Alkoholfrei 4 cl", category: "longdrinks", price: 6.50, ingredients: ["1/2 Limette", "2 BL Rohrzucker", "15 cl Ginger Ale", "Crushed Ice"], isdefault: true },
-        "virgin-mule": { title: "Virgin Mule Alkoholfrei 4 cl", category: "longdrinks", price: 6.50, ingredients: ["4 cl Gordon's 0%", "2 cl Limettensaft", "12 cl Spicy Ginger"], isdefault: true },
-        "shirley-temple": { title: "Shirley Temple Alkoholfrei 4 cl", category: "longdrinks", price: 6.50, ingredients: ["2 cl Grenadine", "2 cl Zitronensaft", "15 cl Ginger Ale"], isdefault: true },
-
-        // --- SHOTS ---
-        "jaegermeister": { title: "Jägermeister 2 cl", category: "shots", price: 3.00, ingredients: ["2 cl Jägermeister Kräuterlikör (eiskalt)"], isdefault: true },
-        "baileys": { title: "Baileys 4 cl", category: "shots", price: 4.00, ingredients: ["4 cl Baileys Irish Cream"], isdefault: true },
-        "sambuca": { title: "Sambuca 2 cl", category: "shots", price: 3.00, ingredients: ["2 cl Sambuca Anislikör"], isdefault: true },
-        "ramazzotti": { title: "Ramazzotti 4 cl", category: "shots", price: 4.50, ingredients: ["4 cl Ramazzotti", "1 Zitronenspalte"], isdefault: true },
-        "tequila": { title: "Tequila 2 cl", category: "shots", price: 3.20, ingredients: ["2 cl Tequila (Silver / Gold)"], isdefault: true },
-        "frangelico": { title: "Frangelico 2 cl", category: "shots", price: 3.20, ingredients: ["2 cl Frangelico", "1 Spritzer Limettensaft"], isdefault: true },
-        "ouzo": { title: "Ouzo 2 cl", category: "shots", price: 3.00, ingredients: ["2 cl Ouzo Anisschnaps"], isdefault: true },
-        "vodka-shot": { title: "Vodka 2 cl", category: "shots", price: 3.00, ingredients: ["2 cl Premium Vodka klar"], isdefault: true },
-        "averna": { title: "Averna 4 cl", category: "shots", price: 4.50, ingredients: ["4 cl Averna Kräuterbitter", "Zitronenscheibe"] }
-    };
-    let currentRecipes = JSON.parse(localStorage.getItem("myBarCocktails"));
-    let currentFilter = "all"; 
-    let tableOrders = JSON.parse(localStorage.getItem("myBarTableOrders")) || {};
-    
-    // ZWANGS-UPDATE & REFRESH: Synchronisiert den Cache mit den neuen Preisdaten
-    if (currentRecipes && (!currentRecipes["jaegermeister"] || !currentRecipes["jaegermeister"].price)) {
-        currentRecipes = null; 
-        localStorage.removeItem("myBarCocktails");
-    }
-    
-    if (!currentRecipes || Object.keys(currentRecipes).length < Object.keys(defaultMenu).length) {
-        currentRecipes = { ...defaultMenu };
-        localStorage.setItem("myBarCocktails", JSON.stringify(currentRecipes));
-    }
-
-    let doubleShotSurcharge = parseFloat(localStorage.getItem("myBarDoubleShotSurcharge")) || 2.50;
-    document.getElementById("globalDoubleShotSurcharge").value = doubleShotSurcharge.toFixed(2);
-
-    function updateDoubleShotSurcharge() {
-        const input = document.getElementById("globalDoubleShotSurcharge");
-        let val = parseFloat(input.value.replace(',', '.'));
-        if (isNaN(val) || val < 0) val = 0;
-        doubleShotSurcharge = val;
-        localStorage.setItem("myBarDoubleShotSurcharge", doubleShotSurcharge);
-        input.value = doubleShotSurcharge.toFixed(2);
-        showRecipe();
-    }
-
-    function filterCategory(category, buttonElement) {
-        currentFilter = category;
-        const buttons = document.querySelectorAll(".btn-filter");
-        buttons.forEach(btn => btn.classList.remove("active"));
-        buttonElement.classList.add("active");
-        
-        updateDropdown();
-        document.getElementById("recipeCard").style.display = "none";
-    }
-
-    function updateDropdown() {
-        const select = document.getElementById("cocktailSelect");
-        select.innerHTML = '<option value="">-- Getränk wählen --</option>';
-
-        for (const key in currentRecipes) {
-            const recipe = currentRecipes[key];
-            const recipeCategory = recipe.category || "custom"; 
-
-            if (currentFilter === "all" || currentFilter === recipeCategory) {
-                const option = document.createElement("option");
-                option.value = key; 
-                const isChanged = !recipe.isdefault && !recipe.isDefault;
-                option.textContent = recipe.title + (isChanged && !key.startsWith("custom-") ? " (Angepasst)" : "");
-                select.appendChild(option);
-            }
-        }
-        select.value = ""; 
-    }
-
-    function toggleTableMode() {
-        const tableName = document.getElementById("activeTableSelect").value;
-        const addToTableBtn = document.getElementById("addToTableBtn");
-        
-        if (tableName !== "" && document.getElementById("recipeCard").style.display === "block") {
-            addToTableBtn.style.display = "block";
-        } else {
-            addToTableBtn.style.display = "none";
-        }
-    }
-
-    function calculateCurrentPrice() {
-        const selected = document.getElementById("cocktailSelect").value;
-        if (!selected) return 0;
-        
-        const recipe = currentRecipes[selected];
-        const doubleShotCheckbox = document.getElementById("doubleShotCheckbox");
-        
-        let price = parseFloat(recipe.price) || 0;
-        if (doubleShotCheckbox && doubleShotCheckbox.checked && recipe.category === "shots") {
-            price += doubleShotSurcharge;
-        }
-        return price;
-    }
-    // Schaltet die Sichtbarkeit des Bestellbuttons um, je nachdem ob ein Tisch aktiv ist
-    function toggleTableMode() {
-        const tableName = document.getElementById("activeTableSelect").value;
-        const addToTableBtn = document.getElementById("addToTableBtn");
-        
-        if (tableName !== "" && document.getElementById("recipeCard").style.display === "block") {
-            addToTableBtn.style.display = "block";
-        } else {
-            addToTableBtn.style.display = "none";
-        }
-    }
-
-    function calculateCurrentPrice() {
-        const selected = document.getElementById("cocktailSelect").value;
-        if (!selected) return 0;
-        
-        const recipe = currentRecipes[selected];
-        const doubleShotCheckbox = document.getElementById("doubleShotCheckbox");
-        
-        let price = parseFloat(recipe.price) || 0;
-        if (doubleShotCheckbox && doubleShotCheckbox.checked && recipe.category === "shots") {
-            price += doubleShotSurcharge;
-        }
-        return price;
-    }
-
-    function showRecipe() {
-        const selected = document.getElementById("cocktailSelect").value;
-        const card = document.getElementById("recipeCard");
-        const editSection = document.getElementById("editSection");
-        const editIngredientsInput = document.getElementById("editIngredients");
-        const editPriceInput = document.getElementById("editPrice");
-        const resetBtn = document.getElementById("resetRecipeBtn");
-        const doubleShotContainer = document.getElementById("doubleShotContainer");
-        
-        if (!selected) { card.style.display = "none"; return; }
-        
-        const recipe = currentRecipes[selected];
-        document.getElementById("cocktailTitle").innerText = recipe.title;
-        document.getElementById("ingredientsList").innerHTML = recipe.ingredients.map(i => `<li>${i.trim()}</li>`).join("");
-        
-        if (recipe.category === "shots") {
-            doubleShotContainer.style.display = "block";
-        } else {
-            doubleShotContainer.style.display = "none";
-            document.getElementById("doubleShotCheckbox").checked = false;
-        }
-        
-        let finalPrice = calculateCurrentPrice();
-        document.getElementById("priceDisplay").innerText = finalPrice.toFixed(2).replace('.', ',');
-        
-        editIngredientsInput.value = recipe.ingredients.join(", ");
-        editPriceInput.value = (parseFloat(recipe.price) || 0).toFixed(2);
-        editSection.style.display = "block";
-        
-        const isCustomCreated = selected.startsWith("custom-");
-        resetBtn.style.display = !isCustomCreated ? "block" : "none";
-        document.getElementById("deleteBtn").style.display = isCustomCreated ? "block" : "none";
-        card.style.display = "block";
-        
-        toggleTableMode();
-    }
-
-    function toggleDoubleShot() {
-        showRecipe();
-    }
-
-    function addDrinkToTable() {
-        const selected = document.getElementById("cocktailSelect").value;
-        const tableName = document.getElementById("activeTableSelect").value;
-        
-        if (!selected || tableName === "") return;
-        
-        const recipe = currentRecipes[selected];
-        const doubleShotCheckbox = document.getElementById("doubleShotCheckbox");
-        const isDouble = (recipe.category === "shots" && doubleShotCheckbox.checked);
-        const finalPrice = calculateCurrentPrice();
-        
-        const drinkName = recipe.title + (isDouble ? " (Doppel-Shot)" : "");
-        
-        if (!tableOrders[tableName]) {
-            tableOrders[tableName] = [];
-        }
-        
-        tableOrders[tableName].push({
-            name: drinkName,
-            price: finalPrice
-        });
-        
-        localStorage.setItem("myBarTableOrders", JSON.stringify(tableOrders));
-        renderTables();
-    }
-    function renderTables() {
-        const container = document.getElementById("tablesContainer");
-        container.innerHTML = "";
-        
-        let hasActiveOrders = false;
-        
-        for (const tableName in tableOrders) {
-            const items = tableOrders[tableName];
-            if (items.length === 0) continue;
-            
-            hasActiveOrders = true;
-            const card = document.createElement("div");
-            card.className = "table-card";
-            
-            let total = 0;
-            let listHTML = "";
-            
-            items.forEach((item, index) => {
-                total += item.price;
-                listHTML += `<li>
-                    ${item.name} - <strong>${item.price.toFixed(2).replace('.', ',')} €</strong>
-                    <span style="color:#dc3545; cursor:pointer; margin-left:8px; font-weight:bold;" onclick="removeSingleDrink('${tableName}', ${index})">✕</span>
-                </li>`;
-            });
-            
-            card.innerHTML = `
-                <h4>
-                    <span>${tableName}</span>
-                    <button class="btn-clear-table" onclick="clearTable('${tableName}')">Abrechnen / Leeren</button>
-                </h4>
-                <ul>${listHTML}</ul>
-                <div style="text-align: right; font-size: 13px; font-weight: bold; margin-top: 5px; color: #ff9f1c;">
-                    Gesamt: ${total.toFixed(2).replace('.', ',')} €
+        <div class="form-row">
+            <label>Zutaten <span style="font-weight:400;">(Enter oder Komma)</span></label>
+            <div class="tag-input-wrap" id="newTagWrap" onclick="focusNewTagInput('newTagWrap')">
+                    <input type="text" id="newTagInput" class="tag-new-input" placeholder="Zutat eingeben …" autocomplete="off">
                 </div>
-            `;
-            
-            container.appendChild(card);
-        }
-        
-        if (!hasActiveOrders) {
-            container.innerHTML = "<p style='color: #888; font-size: 13px;'>Aktuell keine offenen Bestellungen an den Tischen.</p>";
-        }
-    }
+            <p class="tag-hint">Enter ↵ oder Komma , zum Hinzufügen</p>
+        </div>
 
-    function removeSingleDrink(tableName, itemIndex) {
-        if (tableOrders[tableName]) {
-            tableOrders[tableName].splice(itemIndex, 1);
-            if (tableOrders[tableName].length === 0) {
-                delete tableOrders[tableName];
+        <div class="form-row">
+            <label for="newPrice">Preis (€)</label>
+            <input type="number" id="newPrice" step="0.10" min="0" placeholder="0.00">
+        </div>
+
+        <div class="form-row">
+            <label for="newCategory">Kategorie</label>
+            <select id="newCategory">
+                <option value="custom">Eigene</option>
+                <option value="hausgemachtes">Hausgemachtes</option>
+                <option value="longdrinks">Longdrinks</option>
+                <option value="shots">Shots</option>
+                <option value="bier">Bier</option>
+                <option value="prickelndes">Prickelndes</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveCocktail()">Rezept speichern</button>
+    </div>
+
+</div><!-- /app -->
+
+<script>
+/* ═══════════════════════════════════════════════════
+   DATA – Default Menu
+═══════════════════════════════════════════════════ */
+const defaultMenu = {
+    // HAUSGEMACHTES
+    "ginger-lemon":      { title: "Ginger-Lemon Squash",         category: "hausgemachtes", price: 4.90, ingredients: ["4 cl Ingwer-Extrakt","3 cl Limettensaft","ca. 15-20 cl Sodawasser","Eiswürfel"], isDefault: true },
+    "gurke-limette":     { title: "Gurke-Limette Squash",        category: "hausgemachtes", price: 4.90, ingredients: ["3 Scheiben Gurke","3 cl Limettensaft","2 cl Limettensirup","ca. 15-20 cl Sodawasser","Eiswürfel"], isDefault: true },
+    "mango-minze":       { title: "Mango-Minze Squash",          category: "hausgemachtes", price: 4.90, ingredients: ["4 cl Mangosirup","4-5 Blätter Minze","ca. 20 cl Sodawasser","Eiswürfel"], isDefault: true },
+    "rhabarber-limette": { title: "Rhabarber-Limetten Squash",   category: "hausgemachtes", price: 4.90, ingredients: ["12 cl Rhabarber-Nektar","3 cl Limettensaft","ca. 10 cl Sodawasser","Eiswürfel"], isDefault: true },
+    "basilikum-squash":  { title: "Basilikum Squash",            category: "hausgemachtes", price: 4.90, ingredients: ["5 Blätter Basilikum","2 cl Limettensirup","ca. 20 cl Basilikumsoda","Eiswürfel"], isDefault: true },
+    "maracuja-squash":   { title: "Maracuja Squash",             category: "hausgemachtes", price: 4.90, ingredients: ["10 cl Maracuja-Nektar","2 cl Granatapfelsirup","5 Blätter Minze","ca. 10 cl Sodawasser"], isDefault: true },
+    "holunder-squash":   { title: "Holunder Squash",             category: "hausgemachtes", price: 4.90, ingredients: ["2 cl Holunderblütensirup","3 cl Zitronensaft","2 Scheiben Gurke","Sodawasser"], isDefault: true },
+    "eistee-pfirsich":   { title: "Bio Eistee Pfirsich",         category: "hausgemachtes", price: 4.20, ingredients: ["33 cl Bio Eistee Pfirsich (gekühlt)","1 Zitronenscheibe"], isDefault: true },
+    "eistee-zitrone":    { title: "Bio Eistee Zitrone",          category: "hausgemachtes", price: 4.20, ingredients: ["33 cl Bio Eistee Zitrone (gekühlt)","1 Zitronenscheibe"], isDefault: true },
+
+    // BIER
+    "helles":               { title: "Helles 0,5 l",                 category: "bier", price: 4.10, ingredients: ["50 cl Helles vom Fass"], isDefault: true },
+    "weissbier":            { title: "Weissbier 0,5 l",              category: "bier", price: 4.40, ingredients: ["50 cl Weizenbier / Weissbier"], isDefault: true },
+    "weissbier-dunkel":     { title: "Weissbier Dunkel 0,5 l",      category: "bier", price: 4.40, ingredients: ["50 cl Dunkles Weizenbier"], isDefault: true },
+    "weissbier-leicht":     { title: "Weissbier Leicht 0,5 l",      category: "bier", price: 4.40, ingredients: ["50 cl Leichtes Weizenbier"], isDefault: true },
+    "weissbier-alkoholfrei":{ title: "Weissbier Alkoholfrei 0,5 l", category: "bier", price: 4.40, ingredients: ["50 cl Alkoholfreies Weizenbier"], isDefault: true },
+    "dunkel":               { title: "Dunkel 0,5 l",                 category: "bier", price: 4.30, ingredients: ["50 cl Dunkles Bier / Export Dunkel"], isDefault: true },
+    "radler":               { title: "Radler 0,5 l",                 category: "bier", price: 4.10, ingredients: ["25 cl Helles Bier","25 cl Zitronenlimonade"], isDefault: true },
+    "cola-weizen":          { title: "Cola Weizen 0,5 l",            category: "bier", price: 4.40, ingredients: ["25 cl Weizenbier","25 cl Cola"], isDefault: true },
+    "russ":                 { title: "Russ 0,5 l",                   category: "bier", price: 4.40, ingredients: ["25 cl Weizenbier","25 cl Zitronenlimonade"], isDefault: true },
+    "warsteiner-af":        { title: "Warsteiner Alkoholfrei 0,33 l",category: "bier", price: 3.80, ingredients: ["33 cl Alkoholfreies Pils"], isDefault: true },
+    "warsteiner-pils":      { title: "Warsteiner Pils 0,33 l",      category: "bier", price: 3.80, ingredients: ["33 cl Pilsener Bier"], isDefault: true },
+    "corona":               { title: "Corona 0,33 l",                category: "bier", price: 4.80, ingredients: ["33 cl Corona Extra","1 Spalte frische Limette"], isDefault: true },
+    "estrella":             { title: "Estrella Galicia 0,3 l",       category: "bier", price: 3.90, ingredients: ["30 cl Estrella Lagerbier"], isDefault: true },
+
+    // PRICKELNDES
+    "hugo":              { title: "Hugo 0,3 l",                      category: "prickelndes", price: 6.90, ingredients: ["3 cl Holunderblütensirup","12 cl Prosecco","5 cl Sodawasser","Minze","Limette"], isDefault: true },
+    "aperol-spritz":     { title: "Aperol Spritz 0,3 l",            category: "prickelndes", price: 6.90, ingredients: ["6 cl Aperol","9 cl Prosecco","3 cl Sodawasser","Orangenscheibe"], isDefault: true },
+    "basilikum-spritz":  { title: "Basilikum Spritz 0,3 l",         category: "prickelndes", price: 7.20, ingredients: ["12 cl Prosecco","8 cl Basilikumsoda","2 cl Limettensaft","Minze"], isDefault: true },
+    "campari-spritz":    { title: "Campari Spritz 0,3 l",           category: "prickelndes", price: 6.90, ingredients: ["5 cl Campari","10 cl Prosecco","5 cl Orangensaft","Orangenscheibe"], isDefault: true },
+    "pimms":             { title: "Pimm's No.1 0,3 l",              category: "prickelndes", price: 7.50, ingredients: ["5 cl Pimm's No.1","12 cl Ginger Ale","Gurke","Orange","Limette"], isDefault: true },
+    "lillet-wild-berry": { title: "Lillet Wild Berry 0,3 l",        category: "prickelndes", price: 6.90, ingredients: ["5 cl Lillet Blanc","12 cl Schweppes Wild Berry","Himbeeren"], isDefault: true },
+    "lillet-pink":       { title: "Lillet Pink 0,3 l",              category: "prickelndes", price: 6.90, ingredients: ["5 cl Lillet Blanc","12 cl Pink Grapefruit Limo","Limettenscheibe"], isDefault: true },
+    "rosato-tonic":      { title: "Rosato Tonic 0,3 l",             category: "prickelndes", price: 6.90, ingredients: ["5 cl Ramazzotti Aperitivo Rosato","12 cl Tonic Water","Limette"], isDefault: true },
+    "italicus-spritz":   { title: "Italicus Spritz 0,3 l",          category: "prickelndes", price: 7.90, ingredients: ["5 cl Italicus","10 cl Prosecco","5 cl Sodawasser","Limettenscheibe"], isDefault: true },
+    "crodino-spritz":    { title: "Crodino Spritz Alkoholfrei 0,3 l",category: "prickelndes", price: 5.50, ingredients: ["10 cl Crodino","10 cl Sodawasser","Orangenscheibe"], isDefault: true },
+    "prosecco-piccolo":  { title: "Prosecco Piccolo 0,2 l",         category: "prickelndes", price: 4.90, ingredients: ["20 cl Scavi & Ray Frizzante"], isDefault: true },
+    "prosecco-flasche":  { title: "Prosecco Flasche 0,75 l",        category: "prickelndes", price: 19.50, ingredients: ["75 cl Scavi & Ray Frizzante"], isDefault: true },
+    "weinschorle-klein": { title: "Weinschorle 0,25 l",             category: "prickelndes", price: 4.20, ingredients: ["12,5 cl Weißwein","12,5 cl Sodawasser"], isDefault: true },
+    "weinschorle-gross": { title: "Weinschorle 0,5 l",              category: "prickelndes", price: 6.50, ingredients: ["25 cl Weißwein","25 cl Sodawasser"], isDefault: true },
+
+    // LONGDRINKS
+    "moscow-mule":    { title: "Moscow Mule 4 cl",             category: "longdrinks", price: 8.50, ingredients: ["4 cl Vodka","12 cl Spicy Ginger","Gurke","Limette"], isDefault: true },
+    "munich-mule":    { title: "Munich Mule 4 cl",             category: "longdrinks", price: 8.50, ingredients: ["4 cl Gin","12 cl Spicy Ginger","Gurke","Limette"], isDefault: true },
+    "vodka-long":     { title: "Vodka 4 cl",                   category: "longdrinks", price: 8.00, ingredients: ["4 cl Vodka","15 cl Red Bull oder Bitter Lemon"], isDefault: true },
+    "pink-paloma":    { title: "Pink Paloma 4 cl",             category: "longdrinks", price: 8.50, ingredients: ["4 cl Tequila","2 cl Limettensaft","12 cl Pink Grapefruit Limo","Salzrand"], isDefault: true },
+    "cuba-libre":     { title: "Cuba Libre 4 cl",              category: "longdrinks", price: 8.00, ingredients: ["4 cl Havana Club Rum","12 cl Coca-Cola","Limette"], isDefault: true },
+    "whisky-cola":    { title: "Whisky Cola 4 cl",             category: "longdrinks", price: 8.00, ingredients: ["4 cl Whisky","15 cl Coca-Cola"], isDefault: true },
+    "seven-seven":    { title: "Seven & Seven 4 cl",           category: "longdrinks", price: 8.50, ingredients: ["4 cl Seagram's 7 Whisky","15 cl Ginger Ale"], isDefault: true },
+    "gin-tonic-long": { title: "Gin Tonic 4 cl",              category: "longdrinks", price: 8.00, ingredients: ["4 cl Dry Gin","12 cl Tonic Water","Limettenscheibe"], isDefault: true },
+    "haus-gin-tonic": { title: "Haus Gin Tonic 4 cl",         category: "longdrinks", price: 9.00, ingredients: ["4 cl Dry Gin","1 cl Yuzu-Saft","12 cl Tonic Water"], isDefault: true },
+    "gin-basil":      { title: "Gin Basil 4 cl",              category: "longdrinks", price: 8.50, ingredients: ["4 cl Dry Gin","2 cl Limettensaft","12 cl Basilikumsoda"], isDefault: true },
+    "gin-buck":       { title: "Gin Buck 4 cl",               category: "longdrinks", price: 8.50, ingredients: ["4 cl Dry Gin","2 cl Zitronensaft","12 cl Ginger Ale"], isDefault: true },
+    "lemony-snicket": { title: "Lemony Snicket 4 cl",         category: "longdrinks", price: 8.50, ingredients: ["4 cl Dry Gin","2 cl Zitronensaft","1 cl Zuckersirup","12 cl Bitter Lemon"], isDefault: true },
+    "ipanema":        { title: "Ipanema Alkoholfrei 4 cl",    category: "longdrinks", price: 6.50, ingredients: ["½ Limette","2 BL Rohrzucker","15 cl Ginger Ale","Crushed Ice"], isDefault: true },
+    "virgin-mule":    { title: "Virgin Mule Alkoholfrei 4 cl",category: "longdrinks", price: 6.50, ingredients: ["4 cl Gordon's 0%","2 cl Limettensaft","12 cl Spicy Ginger"], isDefault: true },
+    "shirley-temple": { title: "Shirley Temple Alkoholfrei 4 cl",category: "longdrinks", price: 6.50, ingredients: ["2 cl Grenadine","2 cl Zitronensaft","15 cl Ginger Ale"], isDefault: true },
+
+    // SHOTS
+    "jaegermeister": { title: "Jägermeister 2 cl", category: "shots", price: 3.00, ingredients: ["2 cl Jägermeister Kräuterlikör (eiskalt)"], isDefault: true },
+    "baileys":       { title: "Baileys 4 cl",       category: "shots", price: 4.00, ingredients: ["4 cl Baileys Irish Cream"], isDefault: true },
+    "sambuca":       { title: "Sambuca 2 cl",       category: "shots", price: 3.00, ingredients: ["2 cl Sambuca Anislikör"], isDefault: true },
+    "ramazzotti":    { title: "Ramazzotti 4 cl",    category: "shots", price: 4.50, ingredients: ["4 cl Ramazzotti","1 Zitronenspalte"], isDefault: true },
+    "tequila":       { title: "Tequila 2 cl",       category: "shots", price: 3.20, ingredients: ["2 cl Tequila (Silver / Gold)"], isDefault: true },
+    "frangelico":    { title: "Frangelico 2 cl",    category: "shots", price: 3.20, ingredients: ["2 cl Frangelico","1 Spritzer Limettensaft"], isDefault: true },
+    "ouzo":          { title: "Ouzo 2 cl",          category: "shots", price: 3.00, ingredients: ["2 cl Ouzo Anisschnaps"], isDefault: true },
+    "vodka-shot":    { title: "Vodka 2 cl",         category: "shots", price: 3.00, ingredients: ["2 cl Premium Vodka klar"], isDefault: true },
+    "averna":        { title: "Averna 4 cl",        category: "shots", price: 4.50, ingredients: ["4 cl Averna Kräuterbitter","Zitronenscheibe"], isDefault: true },
+};
+
+/* ═══════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════ */
+let currentFilter = "all";
+
+// Cache-Check: Falls gespeicherter Stand weniger Einträge hat → neu laden
+let currentRecipes = (() => {
+    try {
+        const saved = JSON.parse(localStorage.getItem("myBarCocktails"));
+        if (saved && Object.keys(saved).length >= Object.keys(defaultMenu).length) return saved;
+    } catch(e) {}
+    const fresh = { ...defaultMenu };
+    localStorage.setItem("myBarCocktails", JSON.stringify(fresh));
+    return fresh;
+})();
+
+let tableOrders = (() => {
+    try { return JSON.parse(localStorage.getItem("myBarTableOrders")) || {}; } catch(e) { return {}; }
+})();
+
+let doubleShotSurcharge = (() => {
+    const v = parseFloat(localStorage.getItem("myBarDoubleShotSurcharge"));
+    return isNaN(v) ? 2.50 : v;
+})();
+
+// Tag-Arrays für die beiden Tag-Inputs
+let editTags = [];
+let newTags  = [];
+
+/* ═══════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════ */
+document.getElementById("globalDoubleShotSurcharge").value = doubleShotSurcharge.toFixed(2);
+updateDropdown();
+renderTables();
+initTagInput("tagInput", "tagInputWrap", () => editTags, v => { editTags = v; });
+initTagInput("newTagInput", "newTagWrap", () => newTags, v => { newTags = v; });
+/* ═══════════════════════════════════════════════════
+   TAG INPUT ENGINE  (mit Inline-Edit)
+═══════════════════════════════════════════════════ */
+function focusNewTagInput(wrapId) {
+    const wrap = document.getElementById(wrapId);
+    const inp  = wrap.querySelector(".tag-new-input");
+    if (inp) inp.focus();
+}
+
+function initTagInput(inputId, wrapId, getArr, setArr) {
+    const input = document.getElementById(inputId);
+
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            addTag(inputId, wrapId, getArr, setArr);
+        } else if (e.key === "Backspace" && input.value === "") {
+            const arr = getArr();
+            if (arr.length > 0) {
+                arr.pop();
+                setArr([...arr]);
+                renderTags(wrapId, inputId, getArr, setArr);
             }
-            localStorage.setItem("myBarTableOrders", JSON.stringify(tableOrders));
-            renderTables();
         }
-    }
+    });
+    input.addEventListener("blur", () => {
+        if (input.value.trim()) addTag(inputId, wrapId, getArr, setArr);
+    });
+}
 
-    function clearTable(tableName) {
-        if (confirm(`${tableName} wirklich abrechnen und Bestellliste leeren?`)) {
-            delete tableOrders[tableName];
-            localStorage.setItem("myBarTableOrders", JSON.stringify(tableOrders));
-            renderTables();
-        }
-    }
+function addTag(inputId, wrapId, getArr, setArr) {
+    const input = document.getElementById(inputId);
+    const val = input.value.replace(/,/g, "").trim();
+    if (!val) return;
+    const arr = getArr();
+    arr.push(val);
+    setArr([...arr]);
+    input.value = "";
+    renderTags(wrapId, inputId, getArr, setArr);
+}
 
-    function resetToDefault() {
-        const selected = document.getElementById("cocktailSelect").value;
-        if (!selected || selected.startsWith("custom-")) return;
-        
-        if (defaultMenu[selected]) {
-            currentRecipes[selected] = { ...defaultMenu[selected] };
-            localStorage.setItem("myBarCocktails", JSON.stringify(currentRecipes));
-            document.getElementById("doubleShotCheckbox").checked = false;
-            showRecipe();
-            updateDropdown();
-            alert("Erfolgreich zurückgesetzt!");
-        }
-    }
+function renderTags(wrapId, inputId, getArr, setArr) {
+    const wrap  = document.getElementById(wrapId);
+    const input = document.getElementById(inputId);
+    wrap.querySelectorAll(".tag").forEach(t => t.remove());
+    const arr = getArr();
 
-    function updateRecipeIngredients() {
-        const selected = document.getElementById("cocktailSelect").value;
-        const editIngredientsInput = document.getElementById("editIngredients");
-        const editPriceInput = document.getElementById("editPrice");
-        
-        if (!selected) return;
-        const rawInput = editIngredientsInput.value.trim();
-        let newPrice = parseFloat(editPriceInput.value.replace(',', '.'));
-        
-        if (!rawInput) return;
-        if (isNaN(newPrice) || newPrice < 0) newPrice = 0;
-        
-        currentRecipes[selected].ingredients = rawInput.split(",").map(item => item.trim()).filter(item => item !== "");
-        currentRecipes[selected].price = newPrice;
-        currentRecipes[selected].isdefault = false;
-        currentRecipes[selected].isDefault = false;
-        
-        localStorage.setItem("myBarCocktails", JSON.stringify(currentRecipes));
-        showRecipe();
-        updateDropdown();
-        alert("Änderungen gespeichert!");
-    }
+    arr.forEach((tag, i) => {
+        const el = document.createElement("span");
+        el.className = "tag";
+        el.title = "Klicken zum Bearbeiten";
 
-    function saveCocktail() {
-        const nameInput = document.getElementById("newName");
-        const ingInput = document.getElementById("ing1");
-        if (!nameInput.value.trim() || !ingInput.value.trim()) return;
-        
-        const key = "custom-" + Date.now();
-        currentRecipes[key] = { 
-            title: nameInput.value.trim() + " (Eigen)", 
-            category: "custom",
-            price: 0.00, 
-            ingredients: ingInput.value.trim().split(",").map(i => i.trim()), 
-            isDefault: false 
+        const label = document.createElement("span");
+        label.className = "tag-label";
+        label.textContent = tag;
+
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "tag-remove";
+        removeBtn.type = "button";
+        removeBtn.setAttribute("aria-label", "Entfernen");
+        removeBtn.textContent = "×";
+        removeBtn.onclick = (e) => {
+            e.stopPropagation();
+            const a = getArr();
+            a.splice(i, 1);
+            setArr([...a]);
+            renderTags(wrapId, inputId, getArr, setArr);
         };
-        
-        localStorage.setItem("myBarCocktails", JSON.stringify(currentRecipes));
-        nameInput.value = ""; ingInput.value = "";
-        
-        filterCategory("all", document.querySelector(".btn-filter"));
-        document.getElementById("cocktailSelect").value = key;
-        showRecipe();
-    }
 
-    function deleteCustom() {
-        const selected = document.getElementById("cocktailSelect").value;
-        if (!selected || !selected.startsWith("custom-")) return;
-        delete currentRecipes[selected];
-        localStorage.setItem("myBarCocktails", JSON.stringify(currentRecipes));
-        updateDropdown();
-        document.getElementById("recipeCard").style.display = "none";
-    }
+        // Klick auf Label → Inline-Edit
+        label.onclick = (e) => {
+            e.stopPropagation();
+            startInlineEdit(el, label, removeBtn, i, wrapId, inputId, getArr, setArr);
+        };
 
+        el.appendChild(label);
+        el.appendChild(removeBtn);
+        wrap.insertBefore(el, input);
+    });
+}
+
+function startInlineEdit(el, label, removeBtn, index, wrapId, inputId, getArr, setArr) {
+    if (el.classList.contains("editing")) return;
+    el.classList.add("editing");
+
+    const editInput = document.createElement("input");
+    editInput.type = "text";
+    editInput.className = "tag-edit-input";
+    editInput.value = label.textContent;
+    // Breite dynamisch anpassen
+    editInput.style.width = Math.max(60, label.offsetWidth + 20) + "px";
+
+    // Label ausblenden, EditInput einsetzen
+    label.style.display = "none";
+    removeBtn.style.display = "none";
+    el.insertBefore(editInput, label);
+    editInput.focus();
+    editInput.select();
+
+    const commit = () => {
+        const val = editInput.value.replace(/,/g, "").trim();
+        const arr = getArr();
+        if (val) {
+            arr[index] = val;
+        } else {
+            arr.splice(index, 1); // leer → löschen
+        }
+        setArr([...arr]);
+        renderTags(wrapId, inputId, getArr, setArr);
+    };
+
+    editInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); commit(); }
+        if (e.key === "Escape") { renderTags(wrapId, inputId, getArr, setArr); } // abbrechen
+    });
+    editInput.addEventListener("blur", commit);
+}
+
+function setTagsFromArray(arr, inputId, wrapId, getArr, setArr) {
+    setArr([...arr]);
+    renderTags(wrapId, inputId, getArr, setArr);
+}
+
+/* ═══════════════════════════════════════════════════
+   SURCHARGE
+═══════════════════════════════════════════════════ */
+function updateDoubleShotSurcharge() {
+    const input = document.getElementById("globalDoubleShotSurcharge");
+    let val = parseFloat(input.value.replace(",", "."));
+    if (isNaN(val) || val < 0) val = 0;
+    doubleShotSurcharge = val;
+    localStorage.setItem("myBarDoubleShotSurcharge", doubleShotSurcharge);
+    input.value = doubleShotSurcharge.toFixed(2);
+    showRecipe();
+}
+
+/* ═══════════════════════════════════════════════════
+   FILTER & DROPDOWN
+═══════════════════════════════════════════════════ */
+function filterCategory(category, btn) {
+    currentFilter = category;
+    document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+    btn.classList.add("active");
     updateDropdown();
+    document.getElementById("recipeCard").style.display = "none";
+}
+
+function updateDropdown() {
+    const select = document.getElementById("cocktailSelect");
+    select.innerHTML = '<option value="">— Getränk wählen —</option>';
+    for (const key in currentRecipes) {
+        const recipe = currentRecipes[key];
+        const cat = recipe.category || "custom";
+        if (currentFilter === "all" || currentFilter === cat) {
+            const opt = document.createElement("option");
+            opt.value = key;
+            const changed = !recipe.isDefault && !key.startsWith("custom-");
+            opt.textContent = recipe.title + (changed ? " ✎" : "");
+            select.appendChild(opt);
+        }
+    }
+    select.value = "";
+}
+
+/* ═══════════════════════════════════════════════════
+   RECIPE DISPLAY
+═══════════════════════════════════════════════════ */
+function calculateCurrentPrice() {
+    const selected = document.getElementById("cocktailSelect").value;
+    if (!selected) return 0;
+    const recipe = currentRecipes[selected];
+    let price = parseFloat(recipe.price) || 0;
+    const cb = document.getElementById("doubleShotCheckbox");
+    if (cb && cb.checked && recipe.category === "shots") price += doubleShotSurcharge;
+    return price;
+}
+
+function showRecipe() {
+    const selected = document.getElementById("cocktailSelect").value;
+    const card = document.getElementById("recipeCard");
+    if (!selected) { card.style.display = "none"; return; }
+
+    const recipe = currentRecipes[selected];
+
+    document.getElementById("cocktailTitle").textContent = recipe.title;
+
+    // Ingredients
+    const list = document.getElementById("ingredientsList");
+    list.innerHTML = recipe.ingredients.map(i =>
+        `<li><span class="ing-bullet"></span>${i.trim()}</li>`
+    ).join("");
+
+    // Double shot
+    const dsContainer = document.getElementById("doubleShotContainer");
+    const dsCb = document.getElementById("doubleShotCheckbox");
+    if (recipe.category === "shots") {
+        dsContainer.style.display = "block";
+    } else {
+        dsContainer.style.display = "none";
+        dsCb.checked = false;
+    }
+
+    // Price
+    document.getElementById("priceDisplay").textContent = calculateCurrentPrice().toFixed(2).replace(".", ",");
+
+    // Edit section
+    const editSection  = document.getElementById("editSection");
+    const resetBtn     = document.getElementById("resetRecipeBtn");
+    const deleteBtn    = document.getElementById("deleteBtn");
+    const isCustom     = selected.startsWith("custom-");
+
+    setTagsFromArray(recipe.ingredients, "tagInput", "tagInputWrap", () => editTags, v => { editTags = v; });
+    document.getElementById("editPrice").value = (parseFloat(recipe.price) || 0).toFixed(2);
+    editSection.style.display = "block";
+
+    // Zurücksetzen nur anzeigen wenn Standard-Rezept UND verändert wurde
+    const isModified = !recipe.isDefault && !isCustom;
+    resetBtn.style.display  = isModified ? "inline-flex" : "none";
+    deleteBtn.style.display = isCustom   ? "inline-flex" : "none";
+
+    card.style.display = "block";
+    toggleTableMode();
+}
+
+function toggleDoubleShot() {
+    document.getElementById("priceDisplay").textContent =
+        calculateCurrentPrice().toFixed(2).replace(".", ",");
+}
+
+/* ═══════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════ */
+function showToast(msg) {
+    let t = document.getElementById("toast");
+    if (!t) {
+        t = document.createElement("div");
+        t.id = "toast";
+        t.className = "toast";
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+function toggleTableMode() {
+    const tableName = document.getElementById("activeTableSelect").value;
+    const addBtn    = document.getElementById("addToTableBtn");
+    const card      = document.getElementById("recipeCard");
+    const nameSpan  = document.getElementById("addBtnTableName");
+
+    if (tableName && card.style.display === "block") {
+        nameSpan.textContent = tableName;
+        addBtn.style.display = "block";
+    } else {
+        addBtn.style.display = "none";
+    }
+}
+
+/* ═══════════════════════════════════════════════════
+   ADD / REMOVE DRINKS
+═══════════════════════════════════════════════════ */
+function addDrinkToTable() {
+    const selected  = document.getElementById("cocktailSelect").value;
+    const tableName = document.getElementById("activeTableSelect").value;
+    if (!selected || !tableName) return;
+
+    const recipe   = currentRecipes[selected];
+    const isDouble = recipe.category === "shots" && document.getElementById("doubleShotCheckbox").checked;
+    const price    = calculateCurrentPrice();
+    const name     = recipe.title + (isDouble ? " (Doppel-Shot)" : "");
+
+    if (!tableOrders[tableName]) tableOrders[tableName] = [];
+    tableOrders[tableName].push({ name, price });
+
+    localStorage.setItem("myBarTableOrders", JSON.stringify(tableOrders));
     renderTables();
+
+    // Brief visual feedback
+    const btn = document.getElementById("addToTableBtn");
+    btn.textContent = "✓ Hinzugefügt!";
+    setTimeout(() => { btn.innerHTML = `➔ Zu <span id="addBtnTableName">${tableName}</span> hinzufügen`; }, 1000);
+}
+
+function removeSingleDrink(tableName, index) {
+    if (!tableOrders[tableName]) return;
+    tableOrders[tableName].splice(index, 1);
+    if (tableOrders[tableName].length === 0) delete tableOrders[tableName];
+    localStorage.setItem("myBarTableOrders", JSON.stringify(tableOrders));
+    renderTables();
+}
+
+function clearTable(tableName) {
+    if (!confirm(`${tableName}: Alle Einträge entfernen?`)) return;
+    delete tableOrders[tableName];
+    localStorage.setItem("myBarTableOrders", JSON.stringify(tableOrders));
+    renderTables();
+}
+
+/* ═══════════════════════════════════════════════════
+   RENDER TABLES
+═══════════════════════════════════════════════════ */
+function renderTables() {
+    const container = document.getElementById("tablesContainer");
+    container.innerHTML = "";
+
+    const activeTables = Object.keys(tableOrders).filter(t => tableOrders[t].length > 0);
+
+    if (activeTables.length === 0) {
+        container.innerHTML = '<p class="empty-state">Keine offenen Bestellungen</p>';
+        return;
+    }
+
+    activeTables.forEach(tableName => {
+        const items = tableOrders[tableName];
+        const total = items.reduce((s, i) => s + i.price, 0);
+
+        const card = document.createElement("div");
+        card.className = "table-card";
+
+        let itemsHTML = items.map((item, idx) => `
+            <div class="order-item">
+                <span class="order-item-name">${item.name}</span>
+                <span class="order-item-price">${item.price.toFixed(2).replace(".", ",")} €</span>
+                <button class="remove-item-btn" onclick="removeSingleDrink('${tableName}', ${idx})" title="Entfernen">✕</button>
+            </div>
+        `).join("");
+
+        card.innerHTML = `
+            <div class="table-card-header">
+                <h4>${tableName}</h4>
+                <button class="btn btn-danger btn-sm" onclick="clearTable('${tableName}')">Leeren</button>
+            </div>
+            ${itemsHTML}
+            <div class="table-total">
+                <span>${items.length} Position${items.length !== 1 ? "en" : ""}</span>
+                <strong>${total.toFixed(2).replace(".", ",")} €</strong>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+/* ═══════════════════════════════════════════════════
+   EDIT / SAVE / RESET / DELETE
+═══════════════════════════════════════════════════ */
+function updateRecipeIngredients() {
+    const selected = document.getElementById("cocktailSelect").value;
+    if (!selected) return;
+
+    // Flush any pending text in the tag input
+    const tagInputEl = document.getElementById("tagInput");
+    if (tagInputEl.value.trim()) {
+        editTags.push(tagInputEl.value.trim());
+        tagInputEl.value = "";
+    }
+    if (editTags.length === 0) { alert("Bitte mindestens eine Zutat eingeben."); return; }
+
+    let price = parseFloat(document.getElementById("editPrice").value.replace(",", "."));
+    if (isNaN(price) || price < 0) price = 0;
+
+    currentRecipes[selected].ingredients = [...editTags];
+    currentRecipes[selected].price       = price;
+    currentRecipes[selected].isDefault   = false;
+
+    localStorage.setItem("myBarCocktails", JSON.stringify(currentRecipes));
+    showRecipe();
+    updateDropdown();
+    document.getElementById("cocktailSelect").value = selected;
+    showToast("✓ Änderungen gespeichert");
+}
+
+function resetToDefault() {
+    const selected = document.getElementById("cocktailSelect").value;
+    if (!selected || selected.startsWith("custom-") || !defaultMenu[selected]) return;
+    if (!confirm(`Rezept auf Original zurücksetzen?`)) return;
+    currentRecipes[selected] = { ...defaultMenu[selected] };
+    localStorage.setItem("myBarCocktails", JSON.stringify(currentRecipes));
+    document.getElementById("doubleShotCheckbox").checked = false;
+    showRecipe();
+    updateDropdown();
+    document.getElementById("cocktailSelect").value = selected;
+    showToast("✓ Auf Original zurückgesetzt");
+}
+
+function deleteCustom() {
+    const selected = document.getElementById("cocktailSelect").value;
+    if (!selected || !selected.startsWith("custom-")) return;
+    if (!confirm(`"${currentRecipes[selected].title}" wirklich löschen?`)) return;
+    delete currentRecipes[selected];
+    localStorage.setItem("myBarCocktails", JSON.stringify(currentRecipes));
+    updateDropdown();
+    document.getElementById("recipeCard").style.display = "none";
+}
+
+/* ═══════════════════════════════════════════════════
+   NEW RECIPE
+═══════════════════════════════════════════════════ */
+function saveCocktail() {
+    const name     = document.getElementById("newName").value.trim();
+    const newInput = document.getElementById("newTagInput");
+    if (newInput.value.trim()) {
+        newTags.push(newInput.value.trim());
+        newInput.value = "";
+    }    let price = parseFloat(document.getElementById("newPrice").value.replace(",", "."));
+    if (isNaN(price) || price < 0) price = 0;
+    const category = document.getElementById("newCategory").value;
+
+    if (!name)            { alert("Bitte einen Namen eingeben."); return; }
+    if (newTags.length === 0) { alert("Bitte mindestens eine Zutat eingeben."); return; }
+
+    const key = "custom-" + Date.now();
+    currentRecipes[key] = {
+        title: name + (category === "custom" ? " (Eigen)" : ""),
+        category,
+        price,
+        ingredients: [...newTags],
+        isDefault: false
+    };
+    localStorage.setItem("myBarCocktails", JSON.stringify(currentRecipes));
+
+    // Reset form
+    document.getElementById("newName").value = "";
+    document.getElementById("newPrice").value = "";
+    document.getElementById("newCategory").value = "custom";
+    newTags = [];
+    const newWrap = document.getElementById("newTagWrap");
+    newWrap.querySelectorAll(".tag").forEach(t => t.remove());
+
+    filterCategory("all", document.querySelector(".chip"));
+    updateDropdown();
+    document.getElementById("cocktailSelect").value = key;
+    showRecipe();
+}
 </script>
 </body>
 </html>
-
-
